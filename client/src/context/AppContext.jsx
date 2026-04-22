@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AppContext = createContext();
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://localhost:5000/api/exam-conduction';
 
 export const useAppContext = () => useContext(AppContext);
 
@@ -27,7 +27,7 @@ export const AppProvider = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (data.token) {
+      if (res.ok) {
         localStorage.setItem('token', data.token);
         setToken(data.token);
         return { success: true };
@@ -110,17 +110,50 @@ export const AppProvider = ({ children }) => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
-      fetchProfile(); // Refresh stats
+      fetchProfile();
       return data;
     } catch (err) {
       console.error('Failed to complete attempt', err);
     }
   };
 
+  const generateAIQuestions = async (skillId, count = 5) => {
+    try {
+      const res = await fetch(`${API_URL}/questions/generate-ai`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ skillId, count }),
+      });
+      if (res.ok) fetchExams();
+      return await res.json();
+    } catch (err) {
+      console.error('Failed to generate AI questions', err);
+    }
+  };
+
+  const sendMessageToAI = async (message, history = []) => {
+    try {
+      const res = await fetch(`${API_URL}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ message, history }),
+      });
+      return await res.json();
+    } catch (err) {
+      console.error('Failed to send message to AI', err);
+    }
+  };
+
   return (
     <AppContext.Provider value={{ 
       user, token, userStats, exams, loading,
-      login, logout, startExamAttempt, submitAnswer, completeExamAttempt 
+      login, logout, startExamAttempt, submitAnswer, completeExamAttempt, generateAIQuestions, sendMessageToAI 
     }}>
       {children}
     </AppContext.Provider>

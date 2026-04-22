@@ -1,29 +1,12 @@
 const prisma = require('../lib/prisma');
 
-// Create a new exam
-exports.createExam = async (req, res) => {
-  const { title, description, skillId, duration, passingScore } = req.body;
-  try {
-    const exam = await prisma.exam.create({
-      data: {
-        title,
-        description,
-        skillId,
-        duration: parseInt(duration),
-        passingScore: parseInt(passingScore),
-      },
-    });
-    res.status(201).json(exam);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create exam' });
-  }
-};
-
-// Get all exams
 exports.getAllExams = async (req, res) => {
   try {
-    const exams = await prisma.exam.findMany({
-      include: { skill: true },
+    const exams = await prisma.eC_Exam.findMany({
+      include: { 
+        skill: true,
+        questions: true
+      }
     });
     res.status(200).json(exams);
   } catch (error) {
@@ -31,21 +14,32 @@ exports.getAllExams = async (req, res) => {
   }
 };
 
-// Get exam by ID with questions
 exports.getExamById = async (req, res) => {
   const { id } = req.params;
   try {
-    const exam = await prisma.exam.findUnique({
+    const exam = await prisma.eC_Exam.findUnique({
       where: { id },
       include: {
+        skill: true,
         questions: {
-          include: { question: true },
-        },
-      },
+          include: { question: true }
+        }
+      }
     });
-    if (!exam) return res.status(404).json({ error: 'Exam not found' });
     res.status(200).json(exam);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch exam' });
+    res.status(500).json({ error: 'Failed to fetch exam details' });
+  }
+};
+
+exports.createExam = async (req, res) => {
+  const { title, description, skillId, duration, passingScore } = req.body;
+  try {
+    const exam = await prisma.eC_Exam.create({
+      data: { title, description, skillId, duration, passingScore }
+    });
+    res.status(201).json(exam);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create exam' });
   }
 };

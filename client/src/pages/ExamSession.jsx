@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, Loader2, RefreshCcw } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 const ExamSession = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { startExamAttempt, submitAnswer, completeExamAttempt, exams, token } = useAppContext();
+  const { startExamAttempt, submitAnswer, completeExamAttempt, user, token } = useAppContext();
   
   const [exam, setExam] = useState(null);
   const [attempt, setAttempt] = useState(null);
@@ -16,47 +16,57 @@ const ExamSession = () => {
   const [finalResult, setFinalResult] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const initExam = async () => {
+    if (!token || !user) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const res = await fetch(`http://localhost:5000/api/exam-conduction/exams/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const examData = await res.json();
+      
+      if (!res.ok) throw new Error('Failed to fetch exam details');
+      
+      setExam(examData);
+      setTimeLeft((examData.duration || 30) * 60);
+
+      const attemptRes = await startExamAttempt(id);
+      if (attemptRes && attemptRes.id) {
+        setAttempt(attemptRes);
+      } else {
+        throw new Error(attemptRes?.error || 'Failed to start exam session');
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!token) {
       navigate('/login');
       return;
     }
-
-    const initExam = async () => {
-      try {
-        const res = await fetch(`http://localhost:5000/api/exams/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const examData = await res.json();
-        
-        if (!res.ok) throw new Error('Failed to fetch exam');
-        
-        setExam(examData);
-        setTimeLeft(examData.duration * 60);
-
-        // Start attempt on backend
-        const attemptRes = await startExamAttempt(id);
-        if (attemptRes && attemptRes.id) {
-          setAttempt(attemptRes);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initExam();
-  }, [id, exams, token]);
+    
+    if (user) {
+      initExam();
+    }
+  }, [id, token, user]);
 
   useEffect(() => {
-    if (timeLeft <= 0 || submitted) return;
+    if (timeLeft <= 0 || submitted || !attempt) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => prev - 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, submitted]);
+  }, [timeLeft, submitted, attempt]);
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -67,9 +77,9 @@ const ExamSession = () => {
   const handleNext = async () => {
     if (!selectedAnswer || !attempt) return;
 
-    const currentQuestion = exam.questions[currentQuestionIdx].question;
+    const currentQuestionRecord = exam.questions[currentQuestionIdx];
+    const currentQuestion = currentQuestionRecord.question;
     
-    // Submit answer to backend
     await submitAnswer(attempt.id, currentQuestion.id, selectedAnswer);
 
     if (currentQuestionIdx < exam.questions.length - 1) {
@@ -83,26 +93,40 @@ const ExamSession = () => {
   const handleFinish = async () => {
     setLoading(true);
     const result = await completeExamAttempt(attempt.id);
-    setFinalResult(result);
-    setSubmitted(true);
+    if (result && result.error) {
+      setError(result.error);
+    } else {
+      setFinalResult(result);
+      setSubmitted(true);
+    }
     setLoading(false);
   };
 
-  if (loading) {
+  if (loading || (!exam && !error)) {
     return (
-      <div className="container flex justify-center items-center" style={{ minHeight: '50vh' }}>
-        <Loader2 size={48} className="animate-spin" style={{ color: 'var(--primary)' }} />
+      <div className="container flex flex-column justify-center items-center" style={{ minHeight: '50vh' }}>
+        <Loader2 size={48} className="animate-spin mb-4" style={{ color: 'var(--primary)' }} />
+        <p>Loading your exam session...</p>
       </div>
     );
   }
 
-  if (!exam || !attempt || !exam.questions || exam.questions.length === 0) {
+  if (error || !exam || !attempt || !exam.questions || exam.questions.length === 0) {
     return (
-      <div className="container text-center mt-8">
-        <AlertCircle size={48} style={{ color: 'var(--danger)', marginBottom: '1rem' }} />
+      <div className="container text-center mt-8 animate-fade-in">
+        <AlertCircle size={64} style={{ color: 'var(--danger)', marginBottom: '1.5rem' }} />
         <h2>Exam Not Ready</h2>
-        <p>This exam either doesn't exist or has no questions assigned to it yet.</p>
-        <button onClick={() => navigate('/exams')} className="btn btn-secondary mt-4">Back to Exams</button>
+        <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto 2rem' }}>
+          {error || "This exam is either empty or could not be started."}
+        </p>
+        <div className="flex justify-center gap-4">
+          <button onClick={() => navigate('/exams')} className="btn btn-secondary">
+            Back to Exams
+          </button>
+          <button onClick={initExam} className="btn btn-primary flex items-center gap-2">
+            <RefreshCcw size={18} /> Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -154,8 +178,6 @@ const ExamSession = () => {
   const currentQuestionRecord = exam.questions[currentQuestionIdx];
   const currentQuestion = currentQuestionRecord ? currentQuestionRecord.question : null;
 
-  if (!currentQuestion) return null;
-
   return (
     <div className="container animate-fade-in">
       <div className="flex justify-between items-center mb-6">
@@ -163,7 +185,7 @@ const ExamSession = () => {
           <span className="badge badge-primary mb-2">{exam.skill?.name} Assessment</span>
           <h2>{exam.title}</h2>
         </div>
-        <div style={{ background: 'rgba(30,41,59,0.8)', padding: '0.75rem 1.5rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid var(--border)' }}>
+        <div className="glass-panel" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Clock size={20} style={{ color: timeLeft < 300 ? 'var(--danger)' : 'var(--warning)' }} />
           <span style={{ fontSize: '1.2rem', fontWeight: 600, fontFamily: 'monospace', color: timeLeft < 300 ? 'var(--danger)' : 'white' }}>
             {formatTime(timeLeft)}

@@ -5,25 +5,25 @@ async function main() {
   console.log('Seeding database...');
 
   // Create Skills
-  const jsSkill = await prisma.skill.upsert({
+  const jsSkill = await prisma.eC_Skill.upsert({
     where: { name: 'JavaScript' },
     update: {},
     create: { name: 'JavaScript' },
   });
 
-  const reactSkill = await prisma.skill.upsert({
+  const reactSkill = await prisma.eC_Skill.upsert({
     where: { name: 'React' },
     update: {},
     create: { name: 'React' },
   });
 
-  const nodeSkill = await prisma.skill.upsert({
+  const nodeSkill = await prisma.eC_Skill.upsert({
     where: { name: 'Node.js' },
     update: {},
     create: { name: 'Node.js' },
   });
 
-  const sqlSkill = await prisma.skill.upsert({
+  const sqlSkill = await prisma.eC_Skill.upsert({
     where: { name: 'SQL' },
     update: {},
     create: { name: 'SQL' },
@@ -32,7 +32,7 @@ async function main() {
   // Create a Test User (password is 'password123')
   const bcrypt = require('bcryptjs');
   const hashedPassword = await bcrypt.hash('password123', 10);
-  const testUser = await prisma.user.upsert({
+  const testUser = await prisma.eC_User.upsert({
     where: { email: 'test@example.com' },
     update: {},
     create: {
@@ -43,22 +43,33 @@ async function main() {
     },
   });
 
+  const adminUser = await prisma.eC_User.upsert({
+    where: { email: 'admin@example.com' },
+    update: {},
+    create: {
+      email: 'admin@example.com',
+      password: hashedPassword,
+      name: 'Admin User',
+      role: 'ADMIN',
+    },
+  });
+
   // Helper to create questions and link to exam
   const createExamWithQuestions = async (examData, questionsData) => {
-    const exam = await prisma.exam.upsert({
+    const exam = await prisma.eC_Exam.upsert({
       where: { id: examData.id },
       update: {},
       create: examData,
     });
 
     for (const q of questionsData) {
-      const question = await prisma.question.upsert({
+      const question = await prisma.eC_Question.upsert({
         where: { id: q.id },
         update: {},
         create: q,
       });
 
-      await prisma.examQuestion.upsert({
+      await prisma.eC_ExamQuestion.upsert({
         where: { examId_questionId: { examId: exam.id, questionId: question.id } },
         update: {},
         create: { examId: exam.id, questionId: question.id },
@@ -117,4 +128,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

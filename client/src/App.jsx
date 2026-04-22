@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import AIChat from './components/AIChat';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import ExamList from './pages/ExamList';
@@ -22,6 +23,7 @@ function App() {
             <Route path="/exam/:id" element={<ExamSession />} />
           </Routes>
         </main>
+        <AIChat />
       </Router>
     </AppProvider>
   );

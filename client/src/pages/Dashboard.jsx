@@ -2,10 +2,13 @@ import React from 'react';
 import { Target, Award, Clock, Activity, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import AdminTools from '../components/AdminTools';
 
 const Dashboard = () => {
-  const { userStats, user, token } = useAppContext();
+  const { userStats, user, token, logout } = useAppContext();
   const navigate = useNavigate();
+
+  const isAdmin = user?.role === 'ADMIN';
 
   if (!token) {
     return (
@@ -21,7 +24,8 @@ const Dashboard = () => {
   if (!userStats) {
     return (
       <div className="container text-center mt-8">
-        <div className="animate-pulse">Loading your dashboard...</div>
+        <div className="animate-pulse" style={{ marginBottom: '1rem' }}>Loading your secure dashboard...</div>
+        <button onClick={() => logout()} className="btn btn-secondary mt-4">Reset Session</button>
       </div>
     );
   }
@@ -40,6 +44,8 @@ const Dashboard = () => {
           Take a New Exam
         </button>
       </div>
+
+      {isAdmin && <AdminTools />}
 
       <div className="grid grid-cols-4 stagger-1 mb-8">
         <div className="card glass-panel">

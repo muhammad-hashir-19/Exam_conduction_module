@@ -20,14 +20,16 @@ const examRoutes = require('./routes/examRoutes');
 const testRoutes = require('./routes/testRoutes');
 const questionRoutes = require('./routes/questionRoutes');
 const userRoutes = require('./routes/userRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 
 // Use routes
-app.use('/api/auth', authRoutes);
-app.use('/api/skills', skillRoutes);
-app.use('/api/exams', examRoutes);
-app.use('/api/tests', testRoutes);
-app.use('/api/questions', questionRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/exam-conduction/auth', authRoutes);
+app.use('/api/exam-conduction/skills', skillRoutes);
+app.use('/api/exam-conduction/exams', examRoutes);
+app.use('/api/exam-conduction/tests', testRoutes);
+app.use('/api/exam-conduction/questions', questionRoutes);
+app.use('/api/exam-conduction/users', userRoutes);
+app.use('/api/exam-conduction/chat', chatRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
