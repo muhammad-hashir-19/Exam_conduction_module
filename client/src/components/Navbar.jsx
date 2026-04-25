@@ -16,7 +16,7 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="container">
         <Link to="/" className="nav-brand">
-          <GraduationCap style={{ color: 'var(--primary)' }} size={28} />
+          <GraduationCap style={{ color: 'white' }} size={28} />
           <span>SkillCertify</span>
         </Link>
         <div className="nav-links">

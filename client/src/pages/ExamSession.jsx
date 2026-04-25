@@ -12,11 +12,14 @@ const ExamSession = () => {
   const [attempt, setAttempt] = useState(null);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [codeAnswer, setCodeAnswer] = useState('');
+  const [aiFeedback, setAiFeedback] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const [finalResult, setFinalResult] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [submittingAnswer, setSubmittingAnswer] = useState(false);
 
   const initExam = async () => {
     if (!token || !user) return;
@@ -75,16 +78,33 @@ const ExamSession = () => {
   };
 
   const handleNext = async () => {
-    if (!selectedAnswer || !attempt) return;
+    const currentQuestion = exam.questions[currentQuestionIdx]?.question;
+    if (!attempt || !currentQuestion) return;
+    const isCoding = currentQuestion.type === 'CODING';
+    const answer = isCoding ? codeAnswer : selectedAnswer;
+    if (!answer?.trim()) return;
 
-    const currentQuestionRecord = exam.questions[currentQuestionIdx];
-    const currentQuestion = currentQuestionRecord.question;
-    
-    await submitAnswer(attempt.id, currentQuestion.id, selectedAnswer);
+    setSubmittingAnswer(true);
+    setAiFeedback(null);
+    try {
+      const res = await fetch('http://localhost:5000/api/exam-conduction/tests/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ attemptId: attempt.id, questionId: currentQuestion.id, givenAnswer: answer }),
+      });
+      const data = await res.json();
+      if (isCoding && data.aiFeedback) {
+        setAiFeedback(data.aiFeedback);
+        await new Promise(r => setTimeout(r, 2500)); // brief pause to show feedback
+      }
+    } catch (e) { console.error(e); }
+    setSubmittingAnswer(false);
 
     if (currentQuestionIdx < exam.questions.length - 1) {
       setCurrentQuestionIdx(prev => prev + 1);
       setSelectedAnswer(null);
+      setCodeAnswer('');
+      setAiFeedback(null);
     } else {
       handleFinish();
     }
@@ -187,7 +207,7 @@ const ExamSession = () => {
         </div>
         <div className="glass-panel" style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Clock size={20} style={{ color: timeLeft < 300 ? 'var(--danger)' : 'var(--warning)' }} />
-          <span style={{ fontSize: '1.2rem', fontWeight: 600, fontFamily: 'monospace', color: timeLeft < 300 ? 'var(--danger)' : 'white' }}>
+          <span style={{ fontSize: '1.2rem', fontWeight: 600, fontFamily: 'monospace', color: timeLeft < 300 ? 'var(--danger)' : 'black' }}>
             {formatTime(timeLeft)}
           </span>
         </div>
@@ -201,33 +221,52 @@ const ExamSession = () => {
           <h3 style={{ fontSize: '1.4rem', marginTop: '0.5rem' }}>{currentQuestion.text}</h3>
         </div>
 
-        <div className="grid grid-cols-1 stagger-1">
-          {currentQuestion.options?.map((opt, idx) => (
-            <label 
-              key={idx} 
+        {currentQuestion.type === 'CODING' ? (
+          <div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Write your code or solution below:</p>
+            <textarea
+              value={codeAnswer}
+              onChange={e => setCodeAnswer(e.target.value)}
+              placeholder="// Write your code here..."
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '1rem 1.5rem',
-                border: `1px solid ${selectedAnswer === opt ? 'var(--primary)' : 'var(--border)'}`,
-                borderRadius: '8px',
-                cursor: 'pointer',
-                background: selectedAnswer === opt ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)',
-                transition: 'all 0.2s ease',
-                marginBottom: '0.75rem'
+                width: '100%', minHeight: '200px', padding: '1rem',
+                background: '#f8f9ff', border: '1px solid var(--border)',
+                borderRadius: '8px', fontFamily: 'monospace', fontSize: '0.95rem',
+                color: 'var(--text-main)', resize: 'vertical', outline: 'none',
+                lineHeight: 1.6,
               }}
-            >
-              <input 
-                type="radio"
-                name="quiz_option"
-                checked={selectedAnswer === opt}
-                onChange={() => setSelectedAnswer(opt)}
-                style={{ marginRight: '1rem', transform: 'scale(1.2)' }}
-              />
-              <span style={{ fontSize: '1.1rem' }}>{opt}</span>
-            </label>
-          ))}
-        </div>
+            />
+            {aiFeedback && (
+              <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(44,163,151,0.1)', border: '1px solid var(--success)', borderRadius: '8px', color: 'var(--success)', fontSize: '0.9rem' }}>
+                🤖 AI Feedback: {aiFeedback}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 stagger-1">
+            {currentQuestion.options?.map((opt, idx) => (
+              <label
+                key={idx}
+                style={{
+                  display: 'flex', alignItems: 'center',
+                  padding: '1rem 1.5rem',
+                  border: `1px solid ${selectedAnswer === opt ? 'var(--primary)' : 'var(--border)'}`,
+                  borderRadius: '8px', cursor: 'pointer',
+                  background: selectedAnswer === opt ? 'rgba(0,23,54,0.07)' : 'rgba(255,255,255,0.02)',
+                  transition: 'all 0.2s ease', marginBottom: '0.75rem'
+                }}
+              >
+                <input
+                  type="radio" name="quiz_option"
+                  checked={selectedAnswer === opt}
+                  onChange={() => setSelectedAnswer(opt)}
+                  style={{ marginRight: '1rem', transform: 'scale(1.2)' }}
+                />
+                <span style={{ fontSize: '1.1rem' }}>{opt}</span>
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex justify-between items-center">
@@ -237,13 +276,13 @@ const ExamSession = () => {
         >
           Cancel Exam
         </button>
-        <button 
+        <button
           className="btn btn-primary"
           onClick={handleNext}
-          disabled={!selectedAnswer}
-          style={{ opacity: selectedAnswer ? 1 : 0.5, minWidth: '150px' }}
+          disabled={submittingAnswer || (currentQuestion.type === 'CODING' ? !codeAnswer.trim() : !selectedAnswer)}
+          style={{ opacity: (submittingAnswer || (currentQuestion.type === 'CODING' ? !codeAnswer.trim() : !selectedAnswer)) ? 0.5 : 1, minWidth: '160px' }}
         >
-          {currentQuestionIdx < exam.questions.length - 1 ? 'Next Question' : 'Submit Exam'}
+          {submittingAnswer ? <><Loader2 size={16} className="animate-spin" /> Grading...</> : (currentQuestionIdx < exam.questions.length - 1 ? 'Next Question' : 'Submit Exam')}
         </button>
       </div>
     </div>

@@ -22,9 +22,21 @@ exports.submitAnswer = async (req, res) => {
     const question = await prisma.eC_Question.findUnique({ where: { id: questionId } });
     if (!question) return res.status(404).json({ error: 'Question not found' });
 
-    // USE AI AGENT FOR SCORING
-    const isCorrect = await GradingService.evaluateAnswer(givenAnswer, question.correctAnswer, question.text);
-    const scoreAutomated = isCorrect ? (question.points || 10) : 0;
+    let isCorrect = false;
+    let scoreAutomated = 0;
+    let aiFeedback = null;
+
+    if (question.type === 'CODING') {
+      const result = await GradingService.evaluateCodingAnswer(
+        givenAnswer, question.correctAnswer, question.text, question.points || 20
+      );
+      scoreAutomated = result.score;
+      isCorrect = scoreAutomated >= (question.points || 20) * 0.6;
+      aiFeedback = result.feedback;
+    } else {
+      isCorrect = await GradingService.evaluateAnswer(givenAnswer, question.correctAnswer, question.text);
+      scoreAutomated = isCorrect ? (question.points || 10) : 0;
+    }
 
     const submission = await prisma.eC_Submission.upsert({
       where: { attemptId_questionId: { attemptId, questionId } },
@@ -32,12 +44,13 @@ exports.submitAnswer = async (req, res) => {
       create: { attemptId, questionId, givenAnswer, isCorrect, scoreAutomated }
     });
 
-    res.status(201).json(submission);
+    res.status(201).json({ ...submission, aiFeedback });
   } catch (error) {
     console.error('Submit Answer Error:', error);
     res.status(500).json({ error: 'Failed to submit answer' });
   }
 };
+
 
 // Complete an attempt and calculate final score
 exports.completeAttempt = async (req, res) => {

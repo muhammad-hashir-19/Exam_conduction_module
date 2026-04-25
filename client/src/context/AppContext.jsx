@@ -117,6 +117,20 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const generateCodingQuestions = async (skillId, count = 3) => {
+    try {
+      const res = await fetch(`${API_URL}/questions/generate-coding`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ skillId, count }),
+      });
+      if (res.ok) fetchExams();
+      return await res.json();
+    } catch (err) {
+      console.error('Failed to generate coding questions', err);
+    }
+  };
+
   const generateAIQuestions = async (skillId, count = 5) => {
     try {
       const res = await fetch(`${API_URL}/questions/generate-ai`, {
@@ -153,7 +167,7 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={{ 
       user, token, userStats, exams, loading,
-      login, logout, startExamAttempt, submitAnswer, completeExamAttempt, generateAIQuestions, sendMessageToAI 
+      login, logout, startExamAttempt, submitAnswer, completeExamAttempt, generateAIQuestions, generateCodingQuestions, sendMessageToAI 
     }}>
       {children}
     </AppContext.Provider>
