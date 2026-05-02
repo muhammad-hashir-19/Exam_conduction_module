@@ -45,7 +45,7 @@ async function main() {
       email: 'user@skillcertify.com',
       password: userPassword,
       name: 'Test User',
-      role: 'USER'
+      role: 'FREELANCER'
     }
   });
 
@@ -53,7 +53,7 @@ async function main() {
 
   // 3. Seed Skills
   for (const s of skills) {
-    await prisma.eC_Skill.create({ data: { id: s.id, name: s.name, description: s.description } });
+    await prisma.eC_Skill.create({ data: { id: s.id, name: s.name } });
   }
   console.log(`✅ Seeded ${skills.length} skills.`);
 
@@ -86,9 +86,9 @@ async function main() {
       }
     });
 
-    for (const qId of e.questionIds) {
+    for (const qObj of e.questions) {
       await prisma.eC_ExamQuestion.create({
-        data: { examId: e.id, questionId: qId }
+        data: { examId: e.id, questionId: qObj.questionId }
       });
     }
   }
