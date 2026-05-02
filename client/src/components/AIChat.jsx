@@ -3,7 +3,7 @@ import { MessageSquare, X, Send, Loader2, Bot } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 const AIChat = () => {
-  const { sendMessageToAI, token } = useAppContext();
+  const { sendMessageToAI, token, user, exams, generateAIQuestions } = useAppContext();
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([
@@ -36,6 +36,29 @@ const AIChat = () => {
     setLoading(false);
     if (result && result.reply) {
       setChatHistory(prev => [...prev, { role: 'assistant', text: result.reply }]);
+      
+      // Handle Auto-Generation Action
+      if (result.action?.type === 'GENERATE_EXAM' && user?.role?.toUpperCase() === 'ADMIN') {
+        const skillName = result.action.skillName.toLowerCase();
+        
+        // Robust skill search
+        const allSkills = exams.map(e => e.skill).filter(Boolean);
+        const skill = allSkills.find(s => 
+          s.name?.toLowerCase().includes(skillName) || 
+          skillName.includes(s.name?.toLowerCase())
+        );
+        
+        if (skill) {
+          setChatHistory(prev => [...prev, { role: 'assistant', text: `🚀 Initializing ${skill.name} exam generation for you...` }]);
+          generateAIQuestions(skill.id, 5).then(res => {
+            if (res && !res.error) {
+              setChatHistory(prev => [...prev, { role: 'assistant', text: `✅ Success! Your new exam "${skill.name} AI Challenge" is now live on the Exams page.` }]);
+            }
+          });
+        } else {
+          setChatHistory(prev => [...prev, { role: 'assistant', text: "I'd love to help with that, but I couldn't find a matching skill in our database to generate a test for." }]);
+        }
+      }
     } else {
       setChatHistory(prev => [...prev, { role: 'assistant', text: 'Sorry, I encountered an error. Please try again.' }]);
     }
@@ -81,10 +104,11 @@ const AIChat = () => {
                 maxWidth: '85%',
                 padding: '0.75rem 1rem',
                 borderRadius: '12px',
-                background: msg.role === 'user' ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                background: msg.role === 'user' ? 'var(--primary)' : 'rgba(0, 23, 54, 0.7)',
                 color: 'white',
                 fontSize: '0.9rem',
-                border: msg.role === 'user' ? 'none' : '1px solid var(--border)'
+                border: msg.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(10px)'
               }}>
                 {msg.text}
               </div>

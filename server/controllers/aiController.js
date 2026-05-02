@@ -7,11 +7,11 @@ exports.generateQuestions = async (req, res) => {
   const { skillId, count = 5 } = req.body;
 
   try {
-    const skill = await prisma.eC_Skill.findUnique({ where: { id: skillId } });
+    const skill = await prisma.skill.findUnique({ where: { id: parseInt(skillId) } });
     if (!skill) return res.status(404).json({ error: "Skill not found" });
 
     const prompt = `
-      Generate ${count} multiple-choice questions for ${skill.name}. 
+      Generate ${count} multiple-choice questions for ${skill.skill_name}. 
       Also, recommend a total duration (in minutes) for an exam with these questions.
       Return as a JSON object: 
       {
@@ -34,33 +34,32 @@ exports.generateQuestions = async (req, res) => {
 
     const createdQuestions = [];
     for (const q of rawQuestions) {
-      const question = await prisma.eC_Question.create({
+      const question = await prisma.ecQuestion.create({
         data: {
-          text: q.text,
-          type: "MCQ",
-          skillId: skillId,
+          question_text: q.text,
+          question_type: "MCQ",
           options: q.options,
-          correctAnswer: q.correctAnswer,
+          correct_answer: q.correctAnswer,
           points: 10,
         },
       });
       createdQuestions.push(question);
     }
 
-    const timestamp = new Date().toLocaleString();
-    const exam = await prisma.eC_Exam.create({
+    const timestamp = new Date().toLocaleDateString();
+    const exam = await prisma.ecSkillAssessment.create({
       data: {
-        title: `${skill.name} AI Challenge - ${timestamp}`,
-        description: `An AI-generated skill assessment for ${skill.name} created on ${timestamp}.`,
-        skillId: skillId,
-        duration: recommendedDuration,
-        passingScore: Math.ceil(count * 10 * 0.7),
+        assessment_name: `${skill.skill_name} AI Challenge - ${timestamp}`,
+        description: `An AI-generated skill assessment for ${skill.skill_name} created on ${timestamp}.`,
+        skill_id: parseInt(skillId),
+        duration: parseInt(recommendedDuration),
+        passing_score: Math.ceil(count * 10 * 0.7),
       },
     });
 
     for (const q of createdQuestions) {
-      await prisma.eC_ExamQuestion.create({
-        data: { examId: exam.id, questionId: q.id },
+      await prisma.ecExamQuestion.create({
+        data: { assessment_id: exam.id, question_id: q.id },
       });
     }
 
@@ -78,11 +77,11 @@ exports.generateCodingQuestions = async (req, res) => {
   const { skillId, count = 3 } = req.body;
 
   try {
-    const skill = await prisma.eC_Skill.findUnique({ where: { id: skillId } });
+    const skill = await prisma.skill.findUnique({ where: { id: parseInt(skillId) } });
     if (!skill) return res.status(404).json({ error: "Skill not found" });
 
     const prompt = `
-      Generate ${count} coding exercise questions for ${skill.name}.
+      Generate ${count} coding exercise questions for ${skill.skill_name}.
       Each question should be a practical coding problem a developer would solve.
       The "correctAnswer" should be a concise, correct code solution or key logic explanation (not a full essay).
       Return as a JSON object:
@@ -106,33 +105,32 @@ exports.generateCodingQuestions = async (req, res) => {
 
     const createdQuestions = [];
     for (const q of rawQuestions) {
-      const question = await prisma.eC_Question.create({
+      const question = await prisma.ecQuestion.create({
         data: {
-          text: q.text,
-          type: "CODING",
-          skillId: skillId,
+          question_text: q.text,
+          question_type: "CODING",
           options: [],
-          correctAnswer: q.correctAnswer,
+          correct_answer: q.correctAnswer,
           points: 20,
         },
       });
       createdQuestions.push(question);
     }
 
-    const timestamp = new Date().toLocaleString();
-    const exam = await prisma.eC_Exam.create({
+    const timestamp = new Date().toLocaleDateString();
+    const exam = await prisma.ecSkillAssessment.create({
       data: {
-        title: `${skill.name} Coding Challenge - ${timestamp}`,
-        description: `An AI-generated coding assessment for ${skill.name}.`,
-        skillId: skillId,
-        duration: recommendedDuration,
-        passingScore: Math.ceil(count * 20 * 0.6),
+        assessment_name: `${skill.skill_name} Coding Challenge - ${timestamp}`,
+        description: `An AI-generated coding assessment for ${skill.skill_name}.`,
+        skill_id: parseInt(skillId),
+        duration: parseInt(recommendedDuration),
+        passing_score: Math.ceil(count * 20 * 0.6),
       },
     });
 
     for (const q of createdQuestions) {
-      await prisma.eC_ExamQuestion.create({
-        data: { examId: exam.id, questionId: q.id },
+      await prisma.ecExamQuestion.create({
+        data: { assessment_id: exam.id, question_id: q.id },
       });
     }
 
@@ -145,4 +143,3 @@ exports.generateCodingQuestions = async (req, res) => {
     res.status(500).json({ error: "Failed to generate coding questions" });
   }
 };
-

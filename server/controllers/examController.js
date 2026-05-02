@@ -22,7 +22,8 @@ exports.getAllExams = async (req, res) => {
           text: eq.question.question_text,
           type: eq.question.question_type
         }
-      }))
+      })),
+      skill: e.skill ? { ...e.skill, name: e.skill.skill_name } : null
     }));
     res.status(200).json(mappedExams);
   } catch (error) {
@@ -56,7 +57,8 @@ exports.getExamById = async (req, res) => {
           text: eq.question.question_text,
           type: eq.question.question_type
         }
-      }))
+      })),
+      skill: exam.skill ? { ...exam.skill, name: exam.skill.skill_name } : null
     });
   } catch (error) {
     console.error(error);
