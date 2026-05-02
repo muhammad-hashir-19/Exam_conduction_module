@@ -78,7 +78,7 @@ Respond ONLY as valid JSON: {"score": <number>, "feedback": "<string>"}`;
 
 
   calculatePassStatus(totalScore, passingScore) {
-    return totalScore >= passingScore ? 'PASSED' : 'FAILED';
+    return totalScore >= passingScore ? 'passed' : 'failed';
   }
 }
 

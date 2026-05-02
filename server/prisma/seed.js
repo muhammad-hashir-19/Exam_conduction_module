@@ -5,95 +5,111 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting Universal Database Seeding...');
+  console.log('🌱 Starting Centralized Database Seeding...');
 
   const dataPath = path.join(__dirname, 'seed-data.json');
   
   if (!fs.existsSync(dataPath)) {
-    console.error('❌ seed-data.json not found! Run export-db.js first.');
+    console.error('❌ seed-data.json not found!');
     return;
   }
 
   const { skills, questions, exams } = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 
-  // 1. Clear existing data
-  await prisma.eC_ExamQuestion.deleteMany();
-  await prisma.eC_Submission.deleteMany();
-  await prisma.eC_TestAttempt.deleteMany();
-  await prisma.eC_Question.deleteMany();
-  await prisma.eC_Exam.deleteMany();
-  await prisma.eC_Skill.deleteMany();
-  await prisma.eC_User.deleteMany(); // Clear users too for a fresh sync
-
-  console.log('🧹 Database cleaned.');
+  // 1. Clear existing data in correct order
+  console.log('🧹 Cleaning database...');
+  await prisma.ecBadge.deleteMany();
+  await prisma.ecCertificate.deleteMany();
+  await prisma.ecSubmission.deleteMany();
+  await prisma.ecTestAttempt.deleteMany();
+  await prisma.ecExamQuestion.deleteMany();
+  await prisma.ecQuestion.deleteMany();
+  await prisma.ecSkillAssessment.deleteMany();
+  await prisma.skill.deleteMany();
+  await prisma.user.deleteMany();
 
   // 2. Create Default Accounts
   const hashedPassword = await bcrypt.hash('admin123', 10);
   const userPassword = await bcrypt.hash('user123', 10);
 
-  await prisma.eC_User.create({
+  console.log('👤 Seeding users...');
+  const admin = await prisma.user.create({
     data: {
       email: 'admin@skillcertify.com',
-      password: hashedPassword,
-      name: 'System Admin',
-      role: 'ADMIN'
+      password_hash: hashedPassword,
+      first_name: 'System',
+      last_name: 'Admin',
+      role: 'admin'
     }
   });
 
-  await prisma.eC_User.create({
+  const freelancer = await prisma.user.create({
     data: {
       email: 'user@skillcertify.com',
-      password: userPassword,
-      name: 'Test User',
-      role: 'FREELANCER'
+      password_hash: userPassword,
+      first_name: 'Test',
+      last_name: 'User',
+      role: 'freelancer'
     }
   });
 
-  console.log('👤 Seeded Default Admin and User accounts.');
-
-  // 3. Seed Skills
+  // 3. Seed Skills and keep map of UUID -> Int ID
+  console.log('✅ Seeding skills...');
+  const skillMap = {};
   for (const s of skills) {
-    await prisma.eC_Skill.create({ data: { id: s.id, name: s.name } });
+    const createdSkill = await prisma.skill.create({
+      data: {
+        skill_name: s.name,
+        category: s.category || 'General'
+      }
+    });
+    skillMap[s.id] = createdSkill.id;
   }
-  console.log(`✅ Seeded ${skills.length} skills.`);
 
-  // 4. Seed Questions
+  // 4. Seed Questions (First, so we can link them later)
+  console.log('✅ Seeding questions...');
+  const questionMap = {};
   for (const q of questions) {
-    await prisma.eC_Question.create({
+    const createdQuestion = await prisma.ecQuestion.create({
       data: {
-        id: q.id,
-        text: q.text,
-        type: q.type,
+        question_text: q.text,
+        question_type: q.type,
         options: q.options,
-        correctAnswer: q.correctAnswer,
-        points: q.points,
-        skillId: q.skillId
+        correct_answer: q.correctAnswer,
+        points: q.points || 1
       }
     });
+    questionMap[q.id] = createdQuestion.id;
   }
-  console.log(`✅ Seeded ${questions.length} questions.`);
 
-  // 5. Seed Exams and Links
+  // 5. Seed Assessments (Exams) and Links
+  console.log('✅ Seeding assessments and links...');
   for (const e of exams) {
-    await prisma.eC_Exam.create({
+    const createdAssessment = await prisma.ecSkillAssessment.create({
       data: {
-        id: e.id,
-        title: e.title,
+        assessment_name: e.title,
         description: e.description,
-        duration: e.duration,
-        passingScore: e.passingScore,
-        skillId: e.skillId
+        skill_id: skillMap[e.skillId],
+        duration: e.duration || 30,
+        passing_score: e.passingScore || 50
       }
     });
 
-    for (const qObj of e.questions) {
-      await prisma.eC_ExamQuestion.create({
-        data: { examId: e.id, questionId: qObj.questionId }
-      });
+    // Create links in ec_exam_questions
+    for (const qRef of e.questions) {
+      const qId = questionMap[qRef.questionId];
+      if (qId) {
+        await prisma.ecExamQuestion.create({
+          data: {
+            assessment_id: createdAssessment.id,
+            question_id: qId
+          }
+        });
+      }
     }
   }
-  console.log(`✅ Seeded ${exams.length} exams with all question links.`);
-  console.log('🏆 All Set! Your team is now perfectly synchronized.');
+
+  console.log('🏆 Database synchronized with Centralized Schema!');
 }
 
 main()

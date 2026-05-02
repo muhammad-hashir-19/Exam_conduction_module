@@ -20,9 +20,11 @@ const ExamSession = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
+  const calledRef = React.useRef(false);
 
   const initExam = async () => {
-    if (!token || !user) return;
+    if (!token || !user || calledRef.current) return;
+    calledRef.current = true;
     
     try {
       setLoading(true);

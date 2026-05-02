@@ -12,7 +12,7 @@ const Dashboard = () => {
   const downloadCertificate = (cert) => {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const W = 297, H = 210;
-    const certId = `CERT-${cert.id.split('-')[0].toUpperCase()}`;
+    const certId = `CERT-${String(cert.id).split('-')[0].toUpperCase()}`;
     const examTitle = cert.exam?.title || 'Skill Certificate';
     const issueDate = new Date(cert.issueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -192,8 +192,8 @@ const Dashboard = () => {
                   </span>
                 </div>
                 <div className="text-right">
-                  <div className={`badge ${attempt.status === 'PASSED' ? 'badge-success' : 'badge-danger'}`} style={{ marginBottom: '4px', background: attempt.status === 'FAILED' ? 'rgba(239, 68, 68, 0.2)' : undefined, color: attempt.status === 'FAILED' ? '#fca5a5' : undefined }}>
-                    {attempt.status}
+                  <div className={`badge ${attempt.status?.toLowerCase() === 'passed' ? 'badge-success' : 'badge-danger'}`} style={{ marginBottom: '4px', background: attempt.status?.toLowerCase() === 'failed' ? 'rgba(239, 68, 68, 0.2)' : undefined, color: attempt.status?.toLowerCase() === 'failed' ? '#fca5a5' : undefined }}>
+                    {attempt.status?.toUpperCase()}
                   </div>
                   <div style={{ fontSize: '1rem', fontWeight: 700 }}>{attempt.score} pts</div>
                 </div>
@@ -214,7 +214,7 @@ const Dashboard = () => {
                 </div>
                 <div style={{ flex: 1 }}>
                   <h4 style={{ margin: 0 }}>{cert.exam?.title || 'Skill Certificate'}</h4>
-                  <p style={{ margin: 0, fontSize: '0.85rem' }}>ID: CERT-{cert.id.split('-')[0].toUpperCase()}</p>
+                  <p style={{ margin: 0, fontSize: '0.85rem' }}>ID: CERT-{String(cert.id).split('-')[0].toUpperCase()}</p>
                 </div>
                 <button onClick={() => downloadCertificate(cert)} className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>Download</button>
               </div>
