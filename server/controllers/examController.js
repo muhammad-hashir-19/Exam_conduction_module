@@ -11,20 +11,24 @@ exports.getAllExams = async (req, res) => {
       }
     });
     // Map assessment_name to title for frontend compatibility
-    const mappedExams = exams.map(e => ({ 
-      ...e, 
-      title: e.assessment_name,
-      passingScore: e.passing_score,
-      questions: e.exam_questions.map(eq => ({
-        ...eq,
-        question: {
-          ...eq.question,
-          text: eq.question.question_text,
-          type: eq.question.question_type
-        }
-      })),
-      skill: e.skill ? { ...e.skill, name: e.skill.skill_name } : null
-    }));
+    const mappedExams = exams.map(e => {
+      const totalPoints = e.exam_questions.reduce((sum, eq) => sum + (eq.question.points || 0), 0);
+      return { 
+        ...e, 
+        title: e.assessment_name,
+        passingScore: e.passing_score,
+        totalPoints: totalPoints,
+        questions: e.exam_questions.map(eq => ({
+          ...eq,
+          question: {
+            ...eq.question,
+            text: eq.question.question_text,
+            type: eq.question.question_type
+          }
+        })),
+        skill: e.skill ? { ...e.skill, name: e.skill.skill_name } : null
+      };
+    });
     res.status(200).json(mappedExams);
   } catch (error) {
     console.error(error);
@@ -46,10 +50,12 @@ exports.getExamById = async (req, res) => {
     });
     if (!exam) return res.status(404).json({ error: 'Exam not found' });
     
+    const totalPoints = exam.exam_questions.reduce((sum, eq) => sum + (eq.question.points || 0), 0);
     res.status(200).json({ 
       ...exam, 
       title: exam.assessment_name,
       passingScore: exam.passing_score,
+      totalPoints: totalPoints,
       questions: exam.exam_questions.map(eq => ({
         ...eq,
         question: {

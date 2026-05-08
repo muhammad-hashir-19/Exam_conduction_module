@@ -157,24 +157,31 @@ const ExamSession = () => {
     return (
       <div className="container animate-fade-in" style={{ textAlign: 'center', marginTop: '4rem' }}>
         <div className="card glass-panel" style={{ maxWidth: '600px', margin: '0 auto', padding: '3rem' }}>
-          {finalResult.status === 'PASSED' ? (
+          {finalResult.status?.toUpperCase() === 'PASSED' ? (
             <CheckCircle size={80} style={{ color: 'var(--success)', margin: '0 auto 1.5rem' }} />
           ) : (
             <AlertCircle size={80} style={{ color: 'var(--danger)', margin: '0 auto 1.5rem' }} />
           )}
           
           <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>
-            {finalResult.status === 'PASSED' ? 'Congratulations!' : 'Keep Practicing!'}
+            {finalResult.status?.toUpperCase() === 'PASSED' ? 'Congratulations!' : 'Keep Practicing!'}
           </h1>
           <h2 style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
-            {finalResult.status === 'PASSED' ? 'You have passed the exam.' : 'You did not meet the passing score.'}
+            {finalResult.status?.toUpperCase() === 'PASSED' ? 'You have passed the exam.' : 'You did not meet the passing score.'}
           </h2>
 
           <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '2rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-around' }}>
             <div>
               <p style={{ margin: 0 }}>Your Score</p>
-              <h1 style={{ fontSize: '3rem', margin: 0, color: finalResult.status === 'PASSED' ? 'var(--success)' : 'var(--danger)' }}>
+              <h1 style={{ fontSize: '3rem', margin: 0, color: finalResult.status?.toUpperCase() === 'PASSED' ? 'var(--success)' : 'var(--danger)' }}>
                 {finalResult.score}
+              </h1>
+            </div>
+            <div style={{ borderRight: '1px solid var(--border)' }}></div>
+            <div>
+              <p style={{ margin: 0 }}>Passing Requirement</p>
+              <h1 style={{ fontSize: '3rem', margin: 0, color: 'var(--text-muted)' }}>
+                {exam.passingScore}
               </h1>
             </div>
             <div style={{ borderRight: '1px solid var(--border)' }}></div>

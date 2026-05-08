@@ -66,7 +66,8 @@ const ExamList = () => {
                 </span>
                 <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
                   <Award size={16} style={{ marginRight: '6px' }} />
-                  Passing Score: {exam.passingScore} pts
+                  Passing Score: {exam.passingScore} / {exam.totalPoints || 0} pts 
+                  {exam.totalPoints > 0 ? ` (${Math.round((exam.passingScore / exam.totalPoints) * 100)}%)` : ''}
                 </span>
               </div>
             </div>

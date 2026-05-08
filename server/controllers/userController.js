@@ -30,6 +30,7 @@ exports.getUserProfile = async (req, res) => {
 
     const mappedCertifications = user.certificates.map(cert => ({
       ...cert,
+      issueDate: cert.issue_date,
       exam: {
         ...cert.assessment,
         title: cert.assessment.assessment_name
